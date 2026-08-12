@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Знак "Пульс" — тот же путь, что в app-icon-options.html (рекомендованный вариант):
+     тёмная линия на акцентном фоне (см. ic_launcher.xml / colors.xml#ritm_accent). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="160"
+    android:viewportHeight="160">
+    <path
+        android:pathData="M28,84 L53,84 L69,56 L94,110 L110,84 L132,84"
+        android:strokeColor="#191E12"
+        android:strokeWidth="10"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M135,80 a55,55 0 1 1 -110,0 a55,55 0 1 1 110,0"
+        android:strokeColor="#191E12"
+        android:strokeWidth="10"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+</vector>

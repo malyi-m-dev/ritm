@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ritm_background">#A6AC98</color>
+    <color name="ritm_surface">#BEC4B1</color>
+    <color name="ritm_foreground">#191E12</color>
+    <color name="ritm_accent">#E1CD51</color>
+</resources>
