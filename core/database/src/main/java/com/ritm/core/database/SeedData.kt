@@ -1,6 +1,4 @@
-package com.ritm.core.data
-
-import com.ritm.core.database.HabitEntity
+package com.ritm.core.database
 
 /**
  * Стартовый набор — те же 6 привычек, что были в вебовском прототипе (mobile-android.html),

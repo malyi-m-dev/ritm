@@ -16,9 +16,6 @@ interface HabitDao {
     @Query("SELECT * FROM habits ORDER BY sortOrder ASC, id ASC")
     suspend fun getAllOnce(): List<HabitEntity>
 
-    @Query("SELECT COUNT(*) FROM habits")
-    suspend fun count(): Int
-
     @Insert
     suspend fun insert(habit: HabitEntity): Long
 

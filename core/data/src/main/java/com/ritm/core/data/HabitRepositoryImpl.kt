@@ -122,11 +122,6 @@ class HabitRepositoryImpl @Inject constructor(
         habitDao.deleteById(habitId)
     }
 
-    override suspend fun seedIfEmpty() {
-        if (habitDao.count() > 0) return
-        habitDao.insertAll(SeedData.habits())
-    }
-
     override suspend fun finalizeBoundaryHabits(date: LocalDate): DayFinalizeSummary {
         val dateString = date.format(iso)
         val boundaryHabits = habitDao.getAllOnce().filter { it.kind == HabitKind.BOUNDARY.name }

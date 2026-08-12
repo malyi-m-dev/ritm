@@ -47,7 +47,4 @@ interface HabitRepository {
      * для пуш-уведомления. Полезные привычки не трогает — их статус уже живой (progress >= target).
      */
     suspend fun finalizeBoundaryHabits(date: LocalDate): DayFinalizeSummary
-
-    /** Заполняет базу стартовым набором привычек — только если она пуста. */
-    suspend fun seedIfEmpty()
 }

@@ -119,7 +119,11 @@ private fun TodayScreen(state: TodayState, onIntent: (TodayIntent) -> Unit) {
             if (state.visiblePositive.isNotEmpty()) {
                 item {
                     SectionHeader(title = "Полезные", trailing = state.positiveCountLabel)
-                    RitmDividedList(items = state.visiblePositive, modifier = Modifier.padding(bottom = 9.dp)) { habit ->
+                    RitmDividedList(
+                        items = state.visiblePositive,
+                        modifier = Modifier.padding(bottom = 9.dp),
+                        itemKey = { it.id },
+                    ) { habit ->
                         HabitRow(
                             habit = habit,
                             onCheckClick = { onIntent(habitCheckIntent(habit)) },
@@ -131,7 +135,11 @@ private fun TodayScreen(state: TodayState, onIntent: (TodayIntent) -> Unit) {
             if (state.visibleBoundary.isNotEmpty()) {
                 item {
                     SectionHeader(title = "Ограничения", trailing = state.boundaryCountLabel)
-                    RitmDividedList(items = state.visibleBoundary, modifier = Modifier.padding(bottom = 9.dp)) { habit ->
+                    RitmDividedList(
+                        items = state.visibleBoundary,
+                        modifier = Modifier.padding(bottom = 9.dp),
+                        itemKey = { it.id },
+                    ) { habit ->
                         HabitRow(
                             habit = habit,
                             onCheckClick = { onIntent(habitCheckIntent(habit)) },

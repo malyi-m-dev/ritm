@@ -32,14 +32,20 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +56,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.ritm.core.designsystem.DisplayFontFamily
 import com.ritm.core.designsystem.MonoFontFamily
 import com.ritm.core.designsystem.RitmShapes
@@ -60,6 +67,7 @@ import com.ritm.feature.today.NewHabitFormState
 import com.ritm.feature.today.ScheduleChoice
 import com.ritm.feature.today.UNIT_OPTIONS
 import java.time.DayOfWeek
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +88,18 @@ fun NewHabitSheet(
 ) {
     val colors = RitmTheme.colors
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    // Тап по крестику убирает composable из дерева мгновенно, если просто дёрнуть onDismiss —
+    // анимация скрытия шита обрывается на середине, и это выглядит как рывок. Сначала доигрываем
+    // sheetState.hide(), и только когда шит реально скрылся, снимаем его из состояния экрана.
+    // Свайп/тап по скриму сюда не относится — Material3 уже сам доигрывает анимацию перед onDismissRequest.
+    fun dismissAnimated() {
+        scope.launch { sheetState.hide() }.invokeOnCompletion {
+            if (!sheetState.isVisible) onDismiss()
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -92,9 +112,11 @@ fun NewHabitSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
+                // verticalScroll идёт перед imePadding — иначе при анимации клавиатуры скролл
+                // пересчитывается на каждом кадре insets-анимации, и шит заметно "дёргается".
+                .verticalScroll(rememberScrollState())
                 .imePadding()
                 .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
         ) {
             Row(
@@ -117,7 +139,7 @@ fun NewHabitSheet(
                         modifier = Modifier.padding(top = 3.dp),
                     )
                 }
-                IconButton(onClick = onDismiss) {
+                IconButton(onClick = ::dismissAnimated) {
                     Icon(Icons.Outlined.Close, contentDescription = "Закрыть", tint = colors.foreground)
                 }
             }
@@ -238,17 +260,32 @@ fun NewHabitSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Напомнить", color = colors.foreground, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Switch(
-                    checked = form.reminderEnabled,
-                    onCheckedChange = onReminderToggled,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = colors.surface,
-                        checkedTrackColor = colors.foreground,
-                        uncheckedThumbColor = colors.muted,
-                        uncheckedTrackColor = colors.surface,
-                        uncheckedBorderColor = colors.border,
-                    ),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (form.reminderEnabled) {
+                        Text(
+                            text = form.reminderTime,
+                            color = colors.foreground,
+                            fontFamily = MonoFontFamily,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable { showTimePicker = true },
+                        )
+                    }
+                    Switch(
+                        checked = form.reminderEnabled,
+                        onCheckedChange = { enabled ->
+                            onReminderToggled(enabled)
+                            if (enabled) showTimePicker = true
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colors.surface,
+                            checkedTrackColor = colors.foreground,
+                            uncheckedThumbColor = colors.muted,
+                            uncheckedTrackColor = colors.surface,
+                            uncheckedBorderColor = colors.border,
+                        ),
+                    )
+                }
             }
 
             Spacer(Modifier.height(20.dp))
@@ -262,6 +299,89 @@ fun NewHabitSheet(
                 contentAlignment = Alignment.Center,
             ) {
                 Text("Создать привычку", color = colors.surface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+        }
+    }
+
+    if (showTimePicker) {
+        ReminderTimePickerDialog(
+            initialTime = form.reminderTime,
+            onConfirm = { time ->
+                onReminderTimeChanged(time)
+                showTimePicker = false
+            },
+            onDismiss = { showTimePicker = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReminderTimePickerDialog(
+    initialTime: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = RitmTheme.colors
+    val (initialHour, initialMinute) = remember(initialTime) {
+        val parts = initialTime.split(":")
+        val hour = parts.getOrNull(0)?.toIntOrNull() ?: 19
+        val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        hour to minute
+    }
+    val state = rememberTimePickerState(initialHour = initialHour, initialMinute = initialMinute, is24Hour = true)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RitmShapes.card, color = colors.surface, contentColor = colors.foreground) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Время напоминания",
+                    color = colors.foreground,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                TimePicker(
+                    state = state,
+                    colors = TimePickerDefaults.colors(
+                        clockDialColor = colors.foregroundSoft,
+                        clockDialSelectedContentColor = colors.surface,
+                        clockDialUnselectedContentColor = colors.foreground,
+                        selectorColor = colors.foreground,
+                        containerColor = colors.surface,
+                        periodSelectorBorderColor = colors.border,
+                        periodSelectorSelectedContainerColor = colors.foreground,
+                        periodSelectorSelectedContentColor = colors.surface,
+                        periodSelectorUnselectedContainerColor = Color.Transparent,
+                        periodSelectorUnselectedContentColor = colors.foreground,
+                        timeSelectorSelectedContainerColor = colors.foreground,
+                        timeSelectorSelectedContentColor = colors.surface,
+                        timeSelectorUnselectedContainerColor = colors.foregroundSoft,
+                        timeSelectorUnselectedContentColor = colors.foreground,
+                    ),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Отмена", color = colors.muted)
+                    }
+                    TextButton(
+                        onClick = {
+                            val hh = state.hour.toString().padStart(2, '0')
+                            val mm = state.minute.toString().padStart(2, '0')
+                            onConfirm("$hh:$mm")
+                        },
+                    ) {
+                        Text("Готово", color = colors.foreground, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

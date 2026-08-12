@@ -28,7 +28,6 @@ class TodayViewModel @Inject constructor(
     private val weekAnchor = MutableStateFlow(currentWeekMonday())
 
     init {
-        viewModelScope.launch { repository.seedIfEmpty() }
         viewModelScope.launch {
             combine(selectedDate, weekAnchor) { date, anchor -> date to anchor }
                 .flatMapLatest { (date, anchor) ->
